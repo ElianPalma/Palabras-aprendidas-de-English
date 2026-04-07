@@ -47,12 +47,24 @@ const App = () => {
       parts = parts.map(p => p.trim());
 
       if (parts.length >= 2) {
+        let grammar_type = '';
+        let mnemonic = '';
+
+        // Lógica inteligente para 4 o 5 columnas
+        if (parts.length >= 5) {
+          grammar_type = parts[3] || '';
+          mnemonic = parts[4] || '';
+        } else if (parts.length === 4) {
+          mnemonic = parts[3] || ''; // Soporte para tu formato viejo
+        }
+
         newExtractedWords.push({
           id: Date.now() + index, // Temporal para la vista previa
           spanish: parts[0] || '',
           english: parts[1] || '',
           pronunciation: parts[2] || '',
-          mnemonic: parts[3] || ''
+          grammar_type: grammar_type,
+          mnemonic: mnemonic
         });
       }
     });
@@ -78,6 +90,7 @@ const App = () => {
       spanish: w.spanish,
       english: w.english,
       pronunciation: w.pronunciation,
+      grammar_type: w.grammar_type, // Se añade a la base de datos
       mnemonic: w.mnemonic,
       order_num: startCount + index
     }));
@@ -131,7 +144,7 @@ const App = () => {
               </h1>
               <textarea
                 className="w-full h-24 p-3 bg-slate-950 border border-slate-800 rounded-xl text-cyan-50 font-mono text-sm outline-none focus:border-cyan-500 transition resize-none"
-                placeholder="Pega el bloque de Gemini aquí..."
+                placeholder="Pega el bloque de Gemini aquí (ahora con 5 columnas)..."
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
               />
@@ -160,6 +173,7 @@ const App = () => {
                   <div key={w.id} className="text-xs flex gap-2 text-slate-400 border-b border-slate-800/50 pb-1">
                     <span className="text-cyan-400 font-bold w-24 truncate">{w.english}</span> 
                     <span className="truncate">{w.spanish}</span>
+                    {w.grammar_type && <span className="text-blue-400 italic">({w.grammar_type})</span>}
                   </div>
                 ))}
               </div>
@@ -194,7 +208,15 @@ const App = () => {
                         {w.order_num}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-white leading-tight">{w.english}</h3>
+                        {/* Aquí se agrega la etiqueta de tipo gramatical */}
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="text-xl font-bold text-white leading-none">{w.english}</h3>
+                          {w.grammar_type && (
+                            <span className="bg-blue-900/40 text-blue-300 border border-blue-700/50 px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider">
+                              {w.grammar_type}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm font-medium text-slate-400 leading-tight mt-0.5">{w.spanish}</p>
                       </div>
                     </div>
