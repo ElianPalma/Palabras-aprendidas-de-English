@@ -5,3 +5,7 @@
     @apply bg-gray-950 text-white font-sans;
   }
 }
+
+span.text-cyan-500.opacity-70 {
+    font-size: 18px;
+}
