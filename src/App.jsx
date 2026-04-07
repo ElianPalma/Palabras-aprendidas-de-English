@@ -223,8 +223,8 @@ const App = () => {
 
                     {w.pronunciation && (
                       <div className="flex-shrink-0">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-950/40 border border-cyan-800/50 text-cyan-400 font-mono text-[10px] sm:text-xs uppercase font-bold">
-                          <span className="text-cyan-500 opacity-70">▶</span> {w.pronunciation}
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-cyan-950/40 border border-cyan-800/50 text-cyan-400 font-mono text-sm uppercase font-bold">
+                          <span className="text-cyan-500 opacity-70 text-xs">▶</span> {w.pronunciation}
                         </span>
                       </div>
                     )}
