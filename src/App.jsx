@@ -6,10 +6,9 @@ const App = () => {
   const [pastedText, setPastedText] = useState('');
   const [extractedWords, setExtractedWords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('All'); // Nuevo: Estado para el filtro
+  const [filterType, setFilterType] = useState('All');
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos desde Supabase al iniciar
   useEffect(() => {
     fetchWords();
   }, []);
@@ -51,16 +50,15 @@ const App = () => {
         let grammar_type = '';
         let mnemonic = '';
 
-        // Lógica inteligente para 4 o 5 columnas
         if (parts.length >= 5) {
           grammar_type = parts[3] || '';
           mnemonic = parts[4] || '';
         } else if (parts.length === 4) {
-          mnemonic = parts[3] || ''; // Soporte para tu formato viejo
+          mnemonic = parts[3] || ''; 
         }
 
         newExtractedWords.push({
-          id: Date.now() + index, // Temporal para la vista previa
+          id: Date.now() + index, 
           spanish: parts[0] || '',
           english: parts[1] || '',
           pronunciation: parts[2] || '',
@@ -74,7 +72,6 @@ const App = () => {
   };
 
   const saveExtractedWords = async () => {
-    // Filtrar duplicados locales antes de enviar
     const currentEnglishWords = new Set(words.map(w => w.english.toLowerCase()));
     const filtered = extractedWords.filter(w => !currentEnglishWords.has(w.english.toLowerCase()));
     
@@ -86,12 +83,11 @@ const App = () => {
 
     const startCount = words.length + 1;
     
-    // Preparar el array de objetos para insertar en Supabase
     const wordsToInsert = filtered.map((w, index) => ({
       spanish: w.spanish,
       english: w.english,
       pronunciation: w.pronunciation,
-      grammar_type: w.grammar_type, // Se añade a la base de datos
+      grammar_type: w.grammar_type, 
       mnemonic: w.mnemonic,
       order_num: startCount + index
     }));
@@ -104,7 +100,6 @@ const App = () => {
 
       if (error) throw error;
 
-      // Actualizar estado local si la inserción fue exitosa
       if (data) {
         setWords([...words, ...data]);
       }
@@ -124,10 +119,18 @@ const App = () => {
     return 5000;
   };
 
-  // Nuevo: Extraer tipos únicos para los botones de filtro automáticamente
+  const playAudio = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.error("La síntesis de voz no está soportada en este navegador.");
+    }
+  };
+
   const categories = ['All', ...new Set(words.map(w => w.grammar_type).filter(Boolean))];
 
-  // Lógica de filtrado combinada (Búsqueda + Categoría)
   const filteredWords = words.filter(w => {
     const matchesSearch = w.english.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           w.spanish.toLowerCase().includes(searchTerm.toLowerCase());
@@ -206,7 +209,6 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Nuevos: Botones de Filtro Dinámicos */}
               <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {categories.map((cat) => (
                   <button
@@ -246,13 +248,20 @@ const App = () => {
                       </div>
                     </div>
 
-                    {w.pronunciation && (
-                      <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      {w.pronunciation && (
                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-cyan-950/40 border border-cyan-800/50 text-cyan-400 font-mono text-sm uppercase font-bold">
                           <span className="text-cyan-500 opacity-70 text-xs">▶</span> {w.pronunciation}
                         </span>
-                      </div>
-                    )}
+                      )}
+                      <button
+                        onClick={() => playAudio(w.english)}
+                        className="p-1.5 rounded-md bg-cyan-900/30 hover:bg-cyan-700/50 text-cyan-400 border border-cyan-800/50 transition-colors cursor-pointer"
+                        title="Escuchar pronunciación"
+                      >
+                        🔊
+                      </button>
+                    </div>
                   </div>
 
                   {w.mnemonic && (
