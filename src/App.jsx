@@ -119,10 +119,12 @@ const App = () => {
     return 5000;
   };
 
-  const playAudio = (text) => {
+  const playAudio = (text, rate = 1.0) => {
     if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
+      utterance.rate = rate;
       window.speechSynthesis.speak(utterance);
     } else {
       console.error("La síntesis de voz no está soportada en este navegador.");
@@ -254,13 +256,31 @@ const App = () => {
                           <span className="text-cyan-500 opacity-70 text-xs">▶</span> {w.pronunciation}
                         </span>
                       )}
-                      <button
-                        onClick={() => playAudio(w.english)}
-                        className="p-1.5 rounded-md bg-cyan-900/30 hover:bg-cyan-700/50 text-cyan-400 border border-cyan-800/50 transition-colors cursor-pointer"
-                        title="Escuchar pronunciación"
-                      >
-                        🔊
-                      </button>
+                      
+                      <div className="flex items-center bg-cyan-900/30 rounded-md border border-cyan-800/50 overflow-hidden">
+                        <button
+                          onClick={() => playAudio(w.english, 1.0)}
+                          className="px-2.5 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer border-r border-cyan-800/50 text-xs font-bold flex items-center gap-1"
+                          title="Velocidad normal"
+                        >
+                          🔊 <span className="hidden sm:inline">1x</span>
+                        </button>
+                        <button
+                          onClick={() => playAudio(w.english, 0.6)}
+                          className="px-2.5 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer border-r border-cyan-800/50 text-xs font-bold"
+                          title="Lento"
+                        >
+                          0.6x
+                        </button>
+                        <button
+                          onClick={() => playAudio(w.english, 0.3)}
+                          className="px-2.5 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer text-xs font-bold"
+                          title="Muy lento"
+                        >
+                          0.3x
+                        </button>
+                      </div>
+
                     </div>
                   </div>
 
