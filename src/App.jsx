@@ -250,34 +250,34 @@ const App = () => {
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0 flex items-center gap-2">
+                    <div className="flex-shrink-0 flex flex-col items-end gap-2">
                       {w.pronunciation && (
                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-cyan-950/40 border border-cyan-800/50 text-cyan-400 font-mono text-sm uppercase font-bold">
                           <span className="text-cyan-500 opacity-70 text-xs">▶</span> {w.pronunciation}
                         </span>
                       )}
                       
-                      <div className="flex items-center bg-cyan-900/30 rounded-md border border-cyan-800/50 overflow-hidden">
+                      <div className="flex items-center bg-cyan-900/30 rounded-md border border-cyan-800/50 overflow-hidden mt-1">
                         <button
                           onClick={() => playAudio(w.english, 1.0)}
-                          className="px-2.5 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer border-r border-cyan-800/50 text-xs font-bold flex items-center gap-1"
+                          className="px-3 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer border-r border-cyan-800/50 text-xs font-bold flex items-center gap-1"
                           title="Velocidad normal"
                         >
-                          🔊 <span className="hidden sm:inline">1x</span>
+                          🔊 Normal
                         </button>
                         <button
                           onClick={() => playAudio(w.english, 0.6)}
-                          className="px-2.5 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer border-r border-cyan-800/50 text-xs font-bold"
+                          className="px-3 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer border-r border-cyan-800/50 text-xs font-bold"
                           title="Lento"
                         >
-                          0.6x
+                          Lento
                         </button>
                         <button
                           onClick={() => playAudio(w.english, 0.3)}
-                          className="px-2.5 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer text-xs font-bold"
+                          className="px-3 py-1.5 hover:bg-cyan-700/50 text-cyan-400 transition-colors cursor-pointer text-xs font-bold"
                           title="Muy lento"
                         >
-                          0.3x
+                          Muy Lento
                         </button>
                       </div>
 
