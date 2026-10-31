@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import Verbos from './Verbos';
 
 // Categorías generales para simplificar los filtros (Requerimiento 3).
 // Cualquier valor guardado en grammar_type se agrupa en una de estas categorías
@@ -39,6 +40,7 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState('vocab'); // 'vocab' | 'verbos'
 
   // Estado del formulario manual de creación/edición (Requerimiento 1)
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -232,6 +234,8 @@ const App = () => {
   const currentMilestone = getActiveMilestone();
   const progressPercent = Math.min((words.length / currentMilestone) * 100, 100);
 
+  if (section === 'verbos') return <Verbos onBack={() => setSection('vocab')} />;
+
   return (
     <div className="min-h-screen bg-black text-slate-200 p-4 md:p-6 lg:p-8 font-sans selection:bg-cyan-500/30">
       <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-6">
@@ -242,12 +246,20 @@ const App = () => {
               DATA ANALYZER // <span className="text-slate-500 font-medium">Cloud Database</span>
               {loading && <span className="text-xs ml-2 text-cyan-600 animate-pulse">Cargando datos...</span>}
             </h1>
-            <button
-              onClick={openCreateForm}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-900/20 transition"
-            >
-              + Nueva Palabra
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSection('verbos')}
+                className="border border-slate-700 text-slate-300 hover:border-cyan-500 hover:text-cyan-400 px-5 py-2.5 rounded-xl font-bold text-sm tracking-wide transition"
+              >
+                Verbos
+              </button>
+              <button
+                onClick={openCreateForm}
+                className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-900/20 transition"
+              >
+                + Nueva Palabra
+              </button>
+            </div>
           </header>
 
           <div className="bg-slate-900/20 border border-slate-800/50 rounded-2xl p-5 flex-1 flex flex-col">
@@ -273,7 +285,7 @@ const App = () => {
                 {categories.map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => setFilterType(cat)}
+                    onClick={() => (cat === 'Verbo' ? setSection('verbos') : setFilterType(cat))}
                     className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
                       filterType === cat
                       ? 'bg-cyan-500 border-cyan-400 text-black shadow-[0_0_10px_rgba(6,182,212,0.4)]'
