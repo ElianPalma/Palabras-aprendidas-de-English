@@ -50,13 +50,18 @@ const buildItems = (forms, tense) =>
       en = `will ${forms.en.base}`;
       pron = `uíl ${forms.pron.base}`;
     }
+    // forms.items[tiempo][persona] guarda ediciones manuales de un solo ítem (en, pron, note).
+    const ov = forms.items?.[tense]?.[p.key] || {};
+    const enFull = ov.en ?? `${p.en} ${en}`;
     return {
       person: p,
+      tense,
+      idx: i,
       esVerb: forms.es[tense][i],
-      en: `${p.en} ${en}`,
-      speak: `${p.en.split(' / ')[0]} ${en}`,
-      pron: `${p.pron} ${pron}`,
-      note: forms.notes_items?.[tense]?.[p.key] || forms.notes?.[tense] || '',
+      en: enFull,
+      speak: enFull.replace(' / She', ''),
+      pron: ov.pron ?? `${p.pron} ${pron}`,
+      note: ov.note ?? (forms.notes_items?.[tense]?.[p.key] || forms.notes?.[tense] || ''),
     };
   });
 
@@ -93,6 +98,9 @@ const Verbos = ({ onBack }) => {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Edición de un solo ítem (una persona en un tiempo)
+  const [itemEdit, setItemEdit] = useState(null);
+
   useEffect(() => {
     (async () => {
       try {
@@ -109,11 +117,11 @@ const Verbos = ({ onBack }) => {
   }, []);
 
   useEffect(() => {
-    if (!selected || formOpen) return;
+    if (!selected || formOpen || itemEdit) return;
     const onKey = (e) => e.key === 'Escape' && setSelected(null);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected, formOpen]);
+  }, [selected, formOpen, itemEdit]);
 
   const term = searchTerm.toLowerCase();
   const filtered = verbs.filter((v) => v.english.toLowerCase().includes(term) || v.spanish.toLowerCase().includes(term));
@@ -178,6 +186,52 @@ const Verbos = ({ onBack }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openItemEdit = (it) =>
+    setItemEdit({ tense: it.tense, idx: it.idx, key: it.person.key, label: it.person.es, esVerb: it.esVerb, en: it.en, pron: it.pron, note: it.note, saving: false, error: '' });
+
+  const persistItem = async (forms) => {
+    setItemEdit((p) => ({ ...p, saving: true, error: '' }));
+    try {
+      const { data, error: err } = await supabase.from('verbos').update({ forms }).eq('id', selected.id).select();
+      if (err) throw err;
+      if (!data?.[0]) throw new Error('Sin permiso de edición (revisa las políticas RLS).');
+      setVerbs((prev) => prev.map((v) => (v.id === selected.id ? data[0] : v)));
+      setSelected(data[0]);
+      setItemEdit(null);
+    } catch (err) {
+      console.error('Error guardando el ítem:', err.message);
+      setItemEdit((p) => ({ ...p, saving: false, error: 'No se pudo guardar. Revisa la consola y que hayas ejecutado verbos_permisos.sql.' }));
+    }
+  };
+
+  const saveItem = (e) => {
+    e.preventDefault();
+    const { tense, idx, key } = itemEdit;
+    if (!itemEdit.esVerb.trim() || !itemEdit.en.trim() || !itemEdit.pron.trim()) {
+      setItemEdit((p) => ({ ...p, error: 'Español, inglés y pronunciación son obligatorios.' }));
+      return;
+    }
+    const forms = JSON.parse(JSON.stringify(selected.forms));
+    forms.es[tense][idx] = itemEdit.esVerb.trim();
+    const def = buildItems({ ...forms, items: {} }, tense)[idx];
+    const ov = {};
+    if (itemEdit.en.trim() !== def.en) ov.en = itemEdit.en.trim();
+    if (itemEdit.pron.trim() !== def.pron) ov.pron = itemEdit.pron.trim();
+    if (itemEdit.note.trim() !== def.note) ov.note = itemEdit.note.trim();
+    forms.items = { ...(forms.items || {}) };
+    forms.items[tense] = { ...(forms.items[tense] || {}) };
+    if (Object.keys(ov).length) forms.items[tense][key] = ov;
+    else delete forms.items[tense][key];
+    persistItem(forms);
+  };
+
+  const resetItem = () => {
+    const { tense, key } = itemEdit;
+    const forms = JSON.parse(JSON.stringify(selected.forms));
+    if (forms.items?.[tense]) delete forms.items[tense][key];
+    persistItem(forms);
   };
 
   const handleDelete = async (verb) => {
@@ -272,7 +326,10 @@ const Verbos = ({ onBack }) => {
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-white text-lg font-bold leading-tight">{it.en}</p>
-                        <button onClick={() => speak(it.speak)} className="flex-shrink-0 px-2.5 py-1 rounded-md bg-cyan-900/30 border border-cyan-800/50 text-cyan-400 hover:bg-cyan-700/50 text-xs font-bold transition" title="Escuchar">🔊</button>
+                        <div className="flex-shrink-0 flex items-center gap-1.5">
+                          <button onClick={() => openItemEdit(it)} className="px-2.5 py-1 rounded-md border border-slate-700 text-slate-400 hover:text-cyan-400 hover:border-cyan-600 text-xs font-bold transition" title="Editar este ítem">✏️</button>
+                          <button onClick={() => speak(it.speak)} className="px-2.5 py-1 rounded-md bg-cyan-900/30 border border-cyan-800/50 text-cyan-400 hover:bg-cyan-700/50 text-xs font-bold transition" title="Escuchar">🔊</button>
+                        </div>
                       </div>
                       <p className="text-cyan-400 font-mono text-sm uppercase font-bold">▶ {it.pron}</p>
                       {it.note && <p className="text-purple-300/90 text-xs leading-relaxed bg-slate-950/60 border border-purple-900/20 rounded-lg px-2.5 py-2">💡 {it.note}</p>}
@@ -282,6 +339,38 @@ const Verbos = ({ onBack }) => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {itemEdit && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] overflow-y-auto" onClick={() => !itemEdit.saving && setItemEdit(null)}>
+          <form onSubmit={saveItem} onClick={(e) => e.stopPropagation()} className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-3">
+            <h2 className="text-cyan-400 font-black text-lg tracking-tight">
+              Editar: {itemEdit.label} · {TENSES.find((t) => t.key === itemEdit.tense).label}
+            </h2>
+            <div>
+              <label className={labelCls}>Español (solo el verbo, sin el pronombre)</label>
+              <input className={inputCls} value={itemEdit.esVerb} onChange={(e) => setItemEdit({ ...itemEdit, esVerb: e.target.value })} autoFocus />
+            </div>
+            <div>
+              <label className={labelCls}>Inglés (frase completa)</label>
+              <input className={inputCls} value={itemEdit.en} onChange={(e) => setItemEdit({ ...itemEdit, en: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Pronunciación (frase completa)</label>
+              <input className={`${inputCls} font-mono`} value={itemEdit.pron} onChange={(e) => setItemEdit({ ...itemEdit, pron: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Nota de uso</label>
+              <textarea className={`${inputCls} h-24 resize-none`} value={itemEdit.note} onChange={(e) => setItemEdit({ ...itemEdit, note: e.target.value })} />
+            </div>
+            {itemEdit.error && <p className="text-red-400 text-xs font-bold bg-red-950/30 border border-red-900/40 rounded-lg px-3 py-2">{itemEdit.error}</p>}
+            <div className="flex gap-2 mt-1">
+              <button type="button" onClick={() => setItemEdit(null)} disabled={itemEdit.saving} className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm hover:border-slate-500 transition disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={resetItem} disabled={itemEdit.saving} className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-400 font-bold text-sm hover:text-amber-400 hover:border-amber-600 transition disabled:opacity-50" title="Vuelve al texto automático del verbo">Restablecer</button>
+              <button type="submit" disabled={itemEdit.saving} className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm transition disabled:bg-slate-800 disabled:text-slate-500">{itemEdit.saving ? 'Guardando...' : 'Guardar'}</button>
+            </div>
+          </form>
         </div>
       )}
 
