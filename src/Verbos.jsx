@@ -3,10 +3,12 @@ import { supabase } from './supabase';
 
 // Colores e iconos: personas (azul/rosa/amarillo/rojo) y tiempos (ámbar/verde/violeta).
 const PERSONS = [
-  { key: 'yo', es: 'Yo', en: 'I', pron: 'ai', text: 'text-sky-400', accent: 'border-l-sky-400' },
-  { key: 'el', es: 'Él / Ella', en: 'He / She', pron: 'ji / shi', text: 'text-pink-400', accent: 'border-l-pink-400' },
-  { key: 'nosotros', es: 'Nosotros', en: 'We', pron: 'uí', text: 'text-yellow-300', accent: 'border-l-yellow-300' },
-  { key: 'ellos', es: 'Ellos / Ellas', en: 'They', pron: 'dei', text: 'text-red-400', accent: 'border-l-red-400' },
+  { key: 'yo', idx: 0, es: 'Yo', en: 'I', pron: 'ai', text: 'text-sky-400', accent: 'border-l-sky-400' },
+  { key: 'tu', idx: 4, es: 'Tú', en: 'You', pron: 'iú', text: 'text-orange-400', accent: 'border-l-orange-400' },
+  { key: 'el', idx: 1, es: 'Él / Ella', en: 'He / She', pron: 'ji / shi', text: 'text-pink-400', accent: 'border-l-pink-400' },
+  { key: 'nosotros', idx: 2, es: 'Nosotros', en: 'We', pron: 'uí', text: 'text-yellow-300', accent: 'border-l-yellow-300' },
+  { key: 'ustedes', idx: 5, es: 'Ustedes', en: 'You', pron: 'iú', text: 'text-lime-400', accent: 'border-l-lime-400' },
+  { key: 'ellos', idx: 3, es: 'Ellos / Ellas', en: 'They', pron: 'dei', text: 'text-red-400', accent: 'border-l-red-400' },
 ];
 
 const TENSES = [
@@ -28,16 +30,21 @@ const HEADS = {
   el: [[18, false]],
   nosotros: [[7, false], [18, true], [29, false]],
   ellos: [[7, false], [18, false], [29, false]],
+  tu: [[26, false]],
+  ustedes: [[19, false], [30, false]],
 };
 
 const PersonIcon = ({ kind, className = '' }) => (
   <svg viewBox="0 0 36 20" className={`w-9 h-5 flex-shrink-0 ${className}`} aria-hidden="true">
     {HEADS[kind].map(([x, filled]) => <Head key={x} x={x} filled={filled} />)}
+    {(kind === 'tu' || kind === 'ustedes') && (
+      <path d="M3 10 h9 m-3.5 -3.5 l3.5 3.5 l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    )}
   </svg>
 );
 
 const buildItems = (forms, tense) =>
-  PERSONS.map((p, i) => {
+  PERSONS.map((p) => {
     let en, pron;
     if (tense === 'present') {
       const k = p.key === 'el' ? 'third' : 'base';
@@ -56,8 +63,8 @@ const buildItems = (forms, tense) =>
     return {
       person: p,
       tense,
-      idx: i,
-      esVerb: forms.es[tense][i],
+      idx: p.idx,
+      esVerb: forms.es[tense][p.idx] ?? (p.key === 'ustedes' ? forms.es[tense][3] : ''),
       en: enFull,
       speak: enFull.replace(' / She', ''),
       pron: ov.pron ?? `${p.pron} ${pron}`,
@@ -75,11 +82,22 @@ const speak = (text, rate = 1.0) => {
 };
 
 const emptyForms = () => ({
-  es: { past: ['', '', '', ''], present: ['', '', '', ''], future: ['', '', '', ''] },
+  es: { past: ['', '', '', '', '', ''], present: ['', '', '', '', '', ''], future: ['', '', '', '', '', ''] },
   en: { base: '', third: '', past: '' },
   pron: { base: '', third: '', past: '' },
   notes: { present: '', past: '', future: '' },
 });
+
+// Verbos viejos traen 4 formas [yo, él, nosotros, ellos]; se agregan tú (4) y ustedes (5, igual que ellos por defecto).
+const normalizeForms = (forms) => {
+  const f = JSON.parse(JSON.stringify(forms));
+  ['past', 'present', 'future'].forEach((t) => {
+    const a = f.es[t];
+    if (a[4] === undefined) a[4] = '';
+    if (a[5] === undefined) a[5] = a[3];
+  });
+  return f;
+};
 
 const inputCls = 'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500 transition';
 const labelCls = 'block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1';
@@ -129,7 +147,7 @@ const Verbos = ({ onBack }) => {
   const openForm = (verb = null) => {
     setEditing(verb);
     setFd(verb
-      ? { english: verb.english, spanish: verb.spanish, pronunciation: verb.pronunciation || '', forms: JSON.parse(JSON.stringify(verb.forms)) }
+      ? { english: verb.english, spanish: verb.spanish, pronunciation: verb.pronunciation || '', forms: normalizeForms(verb.forms) }
       : { english: '', spanish: '', pronunciation: '', forms: emptyForms() });
     setFormError('');
     setFormOpen(true);
@@ -213,9 +231,9 @@ const Verbos = ({ onBack }) => {
       setItemEdit((p) => ({ ...p, error: 'Español, inglés y pronunciación son obligatorios.' }));
       return;
     }
-    const forms = JSON.parse(JSON.stringify(selected.forms));
+    const forms = normalizeForms(selected.forms);
     forms.es[tense][idx] = itemEdit.esVerb.trim();
-    const def = buildItems({ ...forms, items: {} }, tense)[idx];
+    const def = buildItems({ ...forms, items: {} }, tense).find((x) => x.person.key === key);
     const ov = {};
     if (itemEdit.en.trim() !== def.en) ov.en = itemEdit.en.trim();
     if (itemEdit.pron.trim() !== def.pron) ov.pron = itemEdit.pron.trim();
@@ -405,7 +423,7 @@ const Verbos = ({ onBack }) => {
                   {PERSONS.map((p, i) => (
                     <div key={p.key}>
                       <label className={`${labelCls} ${p.text}`}>{p.es}</label>
-                      <input className={inputCls} value={fd.forms.es[t.key][i]} onChange={(e) => setEs(t.key, i, e.target.value)} />
+                      <input className={inputCls} value={fd.forms.es[t.key][p.idx]} onChange={(e) => setEs(t.key, p.idx, e.target.value)} />
                     </div>
                   ))}
                   <label className={labelCls}>Nota de uso</label>
